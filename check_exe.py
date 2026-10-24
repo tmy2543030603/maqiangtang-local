@@ -13,5 +13,5 @@ if result.returncode:
 if not report.is_file():
  raise SystemExit('Packaged executable did not produce its verification report')
 data=json.loads(report.read_text(encoding='utf8'))
-assert data['success'] and data['gui_initialized'] and data['frozen'],data
+assert data['success'] and data['gui_initialized'] and data['gui_layout_verified'] and data['frozen'],data
 print('PASS packaged GUI',flush=True)

@@ -20,11 +20,11 @@ def write_report(path, data):
         Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf8')
 
 
-def run_gui():
+def run_gui(self_test=False):
     root = tk.Tk()
     root.title('码枪堂 7.4.6 · 本地模式生成器')
-    root.geometry('720x350')
-    root.minsize(660, 350)
+    root.geometry('720x430')
+    root.minsize(660, 430)
     root.columnconfigure(0, weight=1)
     frame = ttk.Frame(root, padding=24)
     frame.grid(sticky='nsew')
@@ -121,7 +121,15 @@ def run_gui():
             root.destroy()
     root.protocol('WM_DELETE_WINDOW', close)
     root.after(100, poll)
-    root.mainloop()
+    if self_test:
+        try:
+            root.update_idletasks()
+            if frame.winfo_reqheight() > root.winfo_height():
+                raise RuntimeError('GUI content exceeds the startup window height')
+        finally:
+            root.destroy()
+    else:
+        root.mainloop()
 
 
 def main():
@@ -133,11 +141,8 @@ def main():
     args = parser.parse_args()
     try:
         if args.self_test:
-            root = tk.Tk()
-            root.withdraw()
-            root.update()
-            root.destroy()
-            write_report(args.report_file, {'success': True, 'gui_initialized': True, 'frozen': bool(getattr(sys, 'frozen', False))})
+            run_gui(self_test=True)
+            write_report(args.report_file, {'success': True, 'gui_initialized': True, 'gui_layout_verified': True, 'frozen': bool(getattr(sys, 'frozen', False))})
         elif args.install is not None:
             if args.output is None:
                 raise ValueError('--output is required with --install')
