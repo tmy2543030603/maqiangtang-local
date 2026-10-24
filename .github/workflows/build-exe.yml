@@ -1,0 +1,61 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - launcher.py
+      - patch_local.py
+      - build_exe.py
+      - check_exe.py
+      - requirements-build.txt
+      - release-notes.md
+      - .github/workflows/build-exe.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-exe-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install build tools
+        run: python -m pip install -r requirements-build.txt
+      - name: Build standalone EXE
+        run: python build_exe.py
+      - name: Verify packaged GUI initialization
+        run: python check_exe.py
+      - name: Write SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash 'dist\MaQiangTang-Local-Builder.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  MaQiangTang-Local-Builder.exe" | Set-Content 'dist\SHA256SUMS.txt' -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MaQiangTang-Local-Builder-Windows-x64
+          path: |
+            dist/MaQiangTang-Local-Builder.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish executable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release view v1.0.0 --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload v1.0.0 'dist\MaQiangTang-Local-Builder.exe' 'dist\SHA256SUMS.txt' --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create v1.0.0 'dist\MaQiangTang-Local-Builder.exe' 'dist\SHA256SUMS.txt' --target $env:GITHUB_SHA --title 'Windows 单文件 EXE v1.0.0' --notes-file release-notes.md --repo $env:GITHUB_REPOSITORY
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
