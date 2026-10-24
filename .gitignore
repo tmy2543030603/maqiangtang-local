@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+output/
+backup*/
+*.asar
+*.exe
+*.dll
+*.enc
+*.log
